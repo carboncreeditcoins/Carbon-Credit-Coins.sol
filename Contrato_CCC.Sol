@@ -1,111 +1,111 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+/*
+Carbon Credit Coins (CCC) - Institutional Advanced Version
+
+✔ ERC20 + Governance (Votes)
+✔ Fixed Supply (20 Billion)
+✔ Certificate Registry (IPFS)
+✔ Carbon Reserve Tracking
+✔ Master Wallet Mint
+✔ Professional Metadata
+
+IMPORTANT:
+This contract does NOT guarantee price or returns.
+Market defines value.
+*/
+
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract CarbonCreditCoin is ERC20, Ownable, Pausable {
-    uint256 public constant MAX_SUPPLY = 20_000_000_000 * 10**18;
+contract CarbonCreditCoins is ERC20Votes, Ownable {
 
-    address public treasury;
-    address public operator;
+    // =============================
+    // 📊 SUPPLY
+    // =============================
+    uint256 public constant MAX_SUPPLY = 20000000000 * 10**18;
 
-    mapping(address => bool) public authorized;
+    // =============================
+    // 🖼️ METADATA
+    // =============================
+    string public imageURI;
 
-    event TreasuryUpdated(address indexed previousTreasury, address indexed newTreasury);
-    event OperatorUpdated(address indexed previousOperator, address indexed newOperator);
-    event AuthorizedSet(address indexed account, bool allowed);
-    event ForeignTokenRescued(address indexed token, uint256 amount, address indexed to);
-    event NativeRescued(uint256 amount, address indexed to);
+    string public projectInfo =
+        "Carbon Credit Coins (CCC) is a digital asset designed to represent carbon credit value, supported by certified carbon credits under custody and subject to independent audits and verification.";
 
-    modifier onlyAdmin() {
-        require(
-            msg.sender == owner() || msg.sender == operator || authorized[msg.sender],
-            "CCC: not authorized"
-        );
-        _;
+    // =============================
+    // 📜 CERTIFICATES
+    // =============================
+    struct Certificate {
+        string ipfsHash;
+        uint256 timestamp;
+        string description;
     }
 
+    Certificate[] public certificates;
+
+    event CertificateAdded(uint256 indexed id, string ipfsHash, string description);
+
+    function addCertificate(string memory _ipfsHash, string memory _desc) external onlyOwner {
+        certificates.push(Certificate(_ipfsHash, block.timestamp, _desc));
+        emit CertificateAdded(certificates.length - 1, _ipfsHash, _desc);
+    }
+
+    function getCertificatesCount() external view returns (uint256) {
+        return certificates.length;
+    }
+
+    // =============================
+    // 🌱 CARBON RESERVE
+    // =============================
+    uint256 public carbonReserve;
+
+    event ReserveUpdated(uint256 amount);
+
+    function updateReserve(uint256 _amount) external onlyOwner {
+        carbonReserve = _amount;
+        emit ReserveUpdated(_amount);
+    }
+
+    // =============================
+    // 🚀 CONSTRUCTOR
+    // =============================
     constructor(
-        address masterOwner,
-        address initialTreasury,
-        address initialOperator
-    ) ERC20("Carbon Credit Coins", "CCC") Ownable(masterOwner) {
-        require(masterOwner != address(0), "CCC: invalid owner");
-        require(initialTreasury != address(0), "CCC: invalid treasury");
-        require(initialOperator != address(0), "CCC: invalid operator");
-
-        treasury = initialTreasury;
-        operator = initialOperator;
-
-        _mint(initialTreasury, MAX_SUPPLY);
-    }
-
-    function setTreasury(address newTreasury) external onlyOwner {
-        require(newTreasury != address(0), "CCC: invalid treasury");
-        address previous = treasury;
-        treasury = newTreasury;
-        emit TreasuryUpdated(previous, newTreasury);
-    }
-
-    function setOperator(address newOperator) external onlyOwner {
-        require(newOperator != address(0), "CCC: invalid operator");
-        address previous = operator;
-        operator = newOperator;
-        emit OperatorUpdated(previous, newOperator);
-    }
-
-    function setAuthorized(address account, bool allowed) external onlyOwner {
-        require(account != address(0), "CCC: invalid account");
-        authorized[account] = allowed;
-        emit AuthorizedSet(account, allowed);
-    }
-
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
-    }
-
-    function rescueForeignToken(address token, uint256 amount) external onlyOwner {
-        require(token != address(0), "CCC: invalid token");
-        require(token != address(this), "CCC: cannot rescue CCC");
-
-        (bool success, bytes memory data) = token.call(
-            abi.encodeWithSignature("transfer(address,uint256)", treasury, amount)
-        );
-
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            "CCC: rescue failed"
-        );
-
-        emit ForeignTokenRescued(token, amount, treasury);
-    }
-
-    function rescueNative(uint256 amount) external onlyOwner {
-        require(address(this).balance >= amount, "CCC: insufficient native balance");
-
-        (bool success, ) = payable(treasury).call{value: amount}("");
-        require(success, "CCC: native rescue failed");
-
-        emit NativeRescued(amount, treasury);
-    }
-
-    function isAdmin(address account) external view returns (bool) {
-        return account == owner() || account == operator || authorized[account];
-    }
-
-    function _update(address from, address to, uint256 value)
-        internal
-        override
-        whenNotPaused
+        address masterWallet,
+        string memory _imageURI
+    )
+        ERC20("Carbon Credit Coins", "CCC")
+        ERC20Permit("Carbon Credit Coins")
     {
-        super._update(from, to, value);
+        require(masterWallet != address(0), "Invalid wallet");
+
+        imageURI = _imageURI;
+
+        _mint(masterWallet, MAX_SUPPLY);
     }
 
-    receive() external payable {}
+    // =============================
+    // 🔄 REQUIRED OVERRIDES
+    // =============================
+    function _afterTokenTransfer(address from, address to, uint256 amount)
+        internal
+        override(ERC20Votes)
+    {
+        super._afterTokenTransfer(from, to, amount);
+    }
+
+    function _mint(address to, uint256 amount)
+        internal
+        override(ERC20Votes)
+    {
+        super._mint(to, amount);
+    }
+
+    function _burn(address account, uint256 amount)
+        internal
+        override(ERC20Votes)
+    {
+        super._burn(account, amount);
+    }
 }

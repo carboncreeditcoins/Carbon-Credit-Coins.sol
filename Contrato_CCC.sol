@@ -1,25 +1,26 @@
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 /*
-Carbon Credit Coins (CCC) - Institutional Advanced Version
+Carbon Credit Coins (CCC) - Institutional Version (Stable)
 
-✔ ERC20 + Governance (Votes)
-✔ Fixed Supply (20 Billion)
-✔ Certificate Registry (IPFS)
-✔ Carbon Reserve Tracking
-✔ Master Wallet Mint
-✔ Professional Metadata
+✔ ERC20 padrão seguro
+✔ Supply fixo (20 bilhões)
+✔ Tokens enviados para carteira master
+✔ Registro de certificados (IPFS)
+✔ Controle de reserva de carbono
+✔ Compatível com Remix (0.8.20)
+✔ Sem dependência de versões problemáticas
 
-IMPORTANT:
-This contract does NOT guarantee price or returns.
-Market defines value.
+IMPORTANTE:
+Este contrato não garante preço ou retorno financeiro.
 */
 
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract CarbonCreditCoins is ERC20Votes, Ownable {
+contract CarbonCreditCoins is ERC20, Ownable {
 
     // =============================
     // 📊 SUPPLY
@@ -35,7 +36,7 @@ contract CarbonCreditCoins is ERC20Votes, Ownable {
         "Carbon Credit Coins (CCC) is a digital asset designed to represent carbon credit value, supported by certified carbon credits under custody and subject to independent audits and verification.";
 
     // =============================
-    // 📜 CERTIFICATES
+    // 📜 CERTIFICADOS
     // =============================
     struct Certificate {
         string ipfsHash;
@@ -57,7 +58,7 @@ contract CarbonCreditCoins is ERC20Votes, Ownable {
     }
 
     // =============================
-    // 🌱 CARBON RESERVE
+    // 🌱 RESERVA DE CARBONO
     // =============================
     uint256 public carbonReserve;
 
@@ -74,38 +75,12 @@ contract CarbonCreditCoins is ERC20Votes, Ownable {
     constructor(
         address masterWallet,
         string memory _imageURI
-    )
-        ERC20("Carbon Credit Coins", "CCC")
-        ERC20Permit("Carbon Credit Coins")
-    {
+    ) ERC20("Carbon Credit Coins", "CCC") {
+
         require(masterWallet != address(0), "Invalid wallet");
 
         imageURI = _imageURI;
 
         _mint(masterWallet, MAX_SUPPLY);
-    }
-
-    // =============================
-    // 🔄 REQUIRED OVERRIDES
-    // =============================
-    function _afterTokenTransfer(address from, address to, uint256 amount)
-        internal
-        override(ERC20Votes)
-    {
-        super._afterTokenTransfer(from, to, amount);
-    }
-
-    function _mint(address to, uint256 amount)
-        internal
-        override(ERC20Votes)
-    {
-        super._mint(to, amount);
-    }
-
-    function _burn(address account, uint256 amount)
-        internal
-        override(ERC20Votes)
-    {
-        super._burn(account, amount);
     }
 }
